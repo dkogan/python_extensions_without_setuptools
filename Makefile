@@ -2,6 +2,9 @@
 # Python and tell Make to use them. The stuff on the bottom is generic build
 # rules, that would come from a common build system.
 
+ifeq (,$(PYTHONVER))
+  $(error Please set the PYTHONVER env var to "2" or "3" to select your python release)
+endif
 
 
 # The python libraries (compiled ones and ones written in python all live in
@@ -16,15 +19,20 @@
 # with __whitespace__. The string I get when running this script will then have
 # a number of whitespace-separated tokens, each setting ONE variable
 define PYVARS_SCRIPT
+from __future__ import print_function
 import sysconfig
 import re
-for v in ("CC","CFLAGS","CCSHARED","INCLUDEPY","BLDSHARED","LDFLAGS"):
-    print re.sub("[\t ]+", "__whitespace__", "PY_{}:={}".format(v, sysconfig.get_config_var(v)))
+conf = sysconfig.get_config_vars()
+for v in ("CC","CFLAGS","CCSHARED","INCLUDEPY","BLDSHARED","LDFLAGS","EXT_SUFFIX"):
+    if v in conf:
+        print(re.sub("[\t ]+", "__whitespace__", "PY_{}:={}".format(v, conf[v])))
 endef
-PYVARS := $(shell python -c '$(PYVARS_SCRIPT)')
+PYVARS := $(shell python$(PYTHONVER) -c '$(PYVARS_SCRIPT)')
 
 # I then $(eval) these tokens one at a time, restoring the whitespace
 $(foreach v,$(PYVARS),$(eval $(subst __whitespace__, ,$v)))
+# this is not set in python2
+PY_EXT_SUFFIX := $(or $(PY_EXT_SUFFIX),.so)
 
 # The compilation flags are all the stuff python told us about. Some of its
 # flags live inside its CC variable, so I pull those out. I also pull out the
@@ -34,10 +42,11 @@ c_library_pywrap.o: CFLAGS += $(filter-out -O%,$(FLAGS_FROM_PYCC) $(PY_CFLAGS) $
 
 # I add an RPATH to the python extension DSO so that it runs in-tree. The build
 # system should pull it out at install time
-project/c_library.so: c_library_pywrap.o libc_library.so
+PY_LIBRARY_SO := project/c_library$(PY_EXT_SUFFIX)
+$(PY_LIBRARY_SO): c_library_pywrap.o libc_library.so
 	$(PY_BLDSHARED) $(PY_LDFLAGS) $< -lc_library -o $@ -L$(abspath .) -Wl,-rpath=$(abspath .)
 
-all: project/c_library.so
+all: $(PY_LIBRARY_SO)
 EXTRA_CLEAN += project/*.so
 
 
