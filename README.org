@@ -1,0 +1,6 @@
+Demo for building python extension modules with just Make, and not setuptools or
+distutils or anything.
+
+This is described in a [[http://notes.secretsauce.net/notes/2017/11/14_python-extension-modules-without-setuptools-or-distutils.html][blog post]]. And this has been integrated into the [[https://github.com/dkogan/mrbuild][mrbuild
+build system]]
+
