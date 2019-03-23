@@ -4,3 +4,23 @@ distutils or anything.
 This is described in a [[http://notes.secretsauce.net/notes/2017/11/14_python-extension-modules-without-setuptools-or-distutils.html][blog post]]. And this has been integrated into the [[https://github.com/dkogan/mrbuild][mrbuild
 build system]]
 
+You can build and run the demo in python3 like so:
+
+#+BEGIN_EXAMPLE
+$ V=3; PYTHONVER=$V make; python$V test.py
+
+cc  -std=gnu99 -pthread -Wno-unused-result -Wsign-compare -DNDEBUG -g -fwrapv -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -flto -fuse-linker-plugin -ffat-lto-objects -fPIC -I/usr/include/python3.7m  -O3 -c -o c_library_pywrap.o c_library_pywrap.c
+cc  -std=gnu99 -fPIC  -O3 -c -o c_library.o c_library.c
+cc -shared -Wl,--default-symver -fPIC -Wl,-soname,libc_library.so.0 c_library.o   -o libc_library.so.0.0
+ln -fs libc_library.so.0.0 libc_library.so
+x86_64-linux-gnu-gcc -pthread -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-z,relro -Wl,-z,relro c_library_pywrap.o -lc_library -o project/c_library.cpython-37m-x86_64-linux-gnu.so -L/home/dima/projects/python_extensions_without_setuptools -Wl,-rpath=/home/dima/projects/python_extensions_without_setuptools
+ln -fs libc_library.so.0.0 libc_library.so.0
+
+in f() Python wrapper. About to call C library
+in f() written in C
+in my written-in-python module g(). Calling c_library.f()
+in f() Python wrapper. About to call C library
+in f() written in C
+#+END_EXAMPLE
+
+To use python2 instead, set =V=2=.
